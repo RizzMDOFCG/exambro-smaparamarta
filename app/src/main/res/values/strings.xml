@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Exambro SMA Paramartha</string>
+    <string name="token_masuk">Token Masuk</string>
+    <string name="token_keluar">Token Keluar</string>
+    <string name="masukkan_token">Masukkan Token</string>
+    <string name="lanjut">Lanjut</string>
+    <string name="batal">Batal</string>
+    <string name="keluar">Keluar</string>
+    <string name="token_salah">Token salah, coba lagi!</string>
+</resources>
