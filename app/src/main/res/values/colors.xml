@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primaryColor">#0F172A</color>
-    <color name="primaryDarkColor">#0B1120</color>
-    <color name="colorAccent">#FBBF24</color>
-    <color name="textColorPrimary">#FFFFFF</color>
-    <color name="textColorSecondary">#94A3B8</color>
-    <color name="windowBackground">#0F172A</color>
-    <color name="cardBackground">#1E293B</color>
+    <color name="bg_dark">#0B1120</color>
+    <color name="bg_card">#1E293B</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_gray">#94A3B8</color>
+    <color name="color_gold">#FBBF24</color>
+    <color name="bg_input">#334155</color>
+    <color name="stroke_input">#475569</color>
 </resources>

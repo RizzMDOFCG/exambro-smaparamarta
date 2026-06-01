@@ -1,13 +1,11 @@
 package com.smaparamartha.exambro
 
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.BatteryManager
 import android.os.Bundle
 import android.telephony.PhoneStateListener
@@ -15,8 +13,6 @@ import android.telephony.SignalStrength
 import android.telephony.TelephonyManager
 import android.view.KeyEvent
 import android.view.View
-import android.view.Window
-import android.view.WindowManager
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -25,9 +21,17 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,15 +40,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivSignal: ImageView
     private lateinit var btnExit: ImageButton
 
+    // Overlay Elements
+    private lateinit var tokenOverlay: RelativeLayout
+    private lateinit var cardToken: CardView
+    private lateinit var tvOverlayTitle: TextView
+    private lateinit var etOverlayToken: EditText
+    private lateinit var btnOverlaySubmit: Button
+    private lateinit var btnOverlayCancel: Button
+
     private val targetUrl = "https://elearningsmaparamartha.vercel.app/"
     private val tokenAccess = "123"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Hide system UI for immersive mode
         hideSystemUI()
-
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webView)
@@ -52,14 +61,68 @@ class MainActivity : AppCompatActivity() {
         ivSignal = findViewById(R.id.ivSignal)
         btnExit = findViewById(R.id.btnExit)
 
+        tokenOverlay = findViewById(R.id.tokenOverlay)
+        cardToken = findViewById(R.id.cardToken)
+        tvOverlayTitle = findViewById(R.id.tvOverlayTitle)
+        etOverlayToken = findViewById(R.id.etOverlayToken)
+        btnOverlaySubmit = findViewById(R.id.btnOverlaySubmit)
+        btnOverlayCancel = findViewById(R.id.btnOverlayCancel)
+
         setupWebView()
+        fetchDynamicConfig()
         
         btnExit.setOnClickListener {
-            showTokenDialog(isExit = true)
+            showTokenOverlay(isExit = true)
         }
 
         // Show enter token dialog on startup
-        showTokenDialog(isExit = false)
+        showTokenOverlay(isExit = false)
+    }
+
+    private fun fetchDynamicConfig() {
+        thread {
+            try {
+                val url = URL("https://token.man1inhil.sch.id/config.json")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+                    reader.close()
+
+                    val json = JSONObject(response.toString())
+                    
+                    // Cek jika server mengembalikan konfigurasi UI kustom
+                    if (json.has("ui_config")) {
+                        val uiConfig = json.getJSONObject("ui_config")
+                        val btnColor = if(uiConfig.has("btn_color")) uiConfig.getString("btn_color") else null
+                        val titleText = if(uiConfig.has("title")) uiConfig.getString("title") else null
+                        
+                        runOnUiThread {
+                            try {
+                                if (btnColor != null) {
+                                    btnOverlaySubmit.setBackgroundColor(Color.parseColor(btnColor))
+                                }
+                                if (titleText != null) {
+                                    tvOverlayTitle.text = titleText
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -80,55 +143,42 @@ class MainActivity : AppCompatActivity() {
         webView.webChromeClient = WebChromeClient()
     }
 
-    private fun showTokenDialog(isExit: Boolean) {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setCancelable(false)
-        dialog.setContentView(R.layout.dialog_token)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT
-        )
-
-        val tvTitle = dialog.findViewById<TextView>(R.id.tvDialogTitle)
-        val etToken = dialog.findViewById<EditText>(R.id.etToken)
-        val btnSubmit = dialog.findViewById<Button>(R.id.btnSubmitToken)
-        val btnCancel = dialog.findViewById<Button>(R.id.btnCancelToken)
+    private fun showTokenOverlay(isExit: Boolean) {
+        tokenOverlay.visibility = View.VISIBLE
+        etOverlayToken.text.clear()
 
         if (isExit) {
-            tvTitle.setText(R.string.token_keluar)
-            btnSubmit.setText(R.string.keluar)
-            btnCancel.visibility = View.VISIBLE
+            tvOverlayTitle.text = "TOKEN KELUAR"
+            btnOverlaySubmit.text = "KELUAR"
+            btnOverlayCancel.visibility = View.VISIBLE
         } else {
-            tvTitle.setText(R.string.token_masuk)
-            btnSubmit.setText(R.string.lanjut)
-            btnCancel.visibility = View.GONE
+            tvOverlayTitle.text = "TOKEN MASUK"
+            btnOverlaySubmit.text = "MASUK"
+            btnOverlayCancel.visibility = View.GONE
         }
 
-        btnSubmit.setOnClickListener {
-            val token = etToken.text.toString().trim()
+        btnOverlaySubmit.setOnClickListener {
+            val token = etOverlayToken.text.toString().trim()
             if (token == tokenAccess) {
-                dialog.dismiss()
+                tokenOverlay.visibility = View.GONE
+                hideSystemUI() // Ensure UI stays hidden after typing
                 if (isExit) {
                     exitApp()
                 } else {
                     startExamMode()
                 }
             } else {
-                Toast.makeText(this, R.string.token_salah, Toast.showLength_SHORT).show()
+                Toast.makeText(this, "Token salah, coba lagi!", Toast.showLength_SHORT).show()
             }
         }
 
-        btnCancel.setOnClickListener {
-            dialog.dismiss()
+        btnOverlayCancel.setOnClickListener {
+            tokenOverlay.visibility = View.GONE
+            hideSystemUI()
         }
-
-        dialog.show()
     }
 
     private fun startExamMode() {
-        // Start Kiosk Mode
         try {
             startLockTask()
         } catch (e: Exception) {
@@ -166,16 +216,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            // Prevent going back to exit app, but allow webview to go back if possible
+            if (tokenOverlay.visibility == View.VISIBLE) {
+                return true // block back button on token screen
+            }
             if (webView.canGoBack()) {
                 webView.goBack()
             }
-            return true // Consume event
+            return true
         }
         return super.onKeyDown(keyCode, event)
     }
-
-    // --- Battery & Signal Monitoring ---
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -198,12 +248,6 @@ class MainActivity : AppCompatActivity() {
         telephonyManager.listen(object : PhoneStateListener() {
             override fun onSignalStrengthsChanged(signalStrength: SignalStrength?) {
                 super.onSignalStrengthsChanged(signalStrength)
-                // Simplified signal mapping since API 23+, we can use level 0-4
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    val level = signalStrength?.level ?: 0
-                    // In a real app we might switch drawables, but here we just update it if needed.
-                    // For simplicity, we just keep the vector icon we have as requested (SVG).
-                }
             }
         }, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
     }
@@ -213,7 +257,6 @@ class MainActivity : AppCompatActivity() {
         try {
             unregisterReceiver(batteryReceiver)
         } catch (e: Exception) {
-            // Ignored
         }
     }
 }
