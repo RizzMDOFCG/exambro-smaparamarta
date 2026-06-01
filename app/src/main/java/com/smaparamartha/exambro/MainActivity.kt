@@ -1,5 +1,7 @@
 package com.smaparamartha.exambro
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,6 +10,8 @@ import android.content.IntentFilter
 import android.graphics.Color
 import android.os.BatteryManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.telephony.PhoneStateListener
 import android.telephony.SignalStrength
 import android.telephony.TelephonyManager
@@ -21,11 +25,11 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.cardview.widget.CardView
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -42,7 +46,8 @@ class MainActivity : AppCompatActivity() {
 
     // Overlay Elements
     private lateinit var tokenOverlay: RelativeLayout
-    private lateinit var cardToken: CardView
+    private lateinit var splashScreen: RelativeLayout
+    private lateinit var cardToken: LinearLayout
     private lateinit var tvOverlayTitle: TextView
     private lateinit var etOverlayToken: EditText
     private lateinit var btnOverlaySubmit: Button
@@ -62,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         btnExit = findViewById(R.id.btnExit)
 
         tokenOverlay = findViewById(R.id.tokenOverlay)
+        splashScreen = findViewById(R.id.splashScreen)
         cardToken = findViewById(R.id.cardToken)
         tvOverlayTitle = findViewById(R.id.tvOverlayTitle)
         etOverlayToken = findViewById(R.id.etOverlayToken)
@@ -75,8 +81,18 @@ class MainActivity : AppCompatActivity() {
             showTokenOverlay(isExit = true)
         }
 
-        // Show enter token dialog on startup
-        showTokenOverlay(isExit = false)
+        // Delay splash screen
+        Handler(Looper.getMainLooper()).postDelayed({
+            splashScreen.animate()
+                .alpha(0f)
+                .setDuration(500)
+                .setListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        splashScreen.visibility = View.GONE
+                        showTokenOverlay(isExit = false)
+                    }
+                })
+        }, 2000)
     }
 
     private fun fetchDynamicConfig() {
@@ -99,7 +115,6 @@ class MainActivity : AppCompatActivity() {
 
                     val json = JSONObject(response.toString())
                     
-                    // Cek jika server mengembalikan konfigurasi UI kustom
                     if (json.has("ui_config")) {
                         val uiConfig = json.getJSONObject("ui_config")
                         val btnColor = if(uiConfig.has("btn_color")) uiConfig.getString("btn_color") else null
@@ -216,8 +231,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (tokenOverlay.visibility == View.VISIBLE) {
-                return true // block back button on token screen
+            if (splashScreen.visibility == View.VISIBLE || tokenOverlay.visibility == View.VISIBLE) {
+                return true // block back button
             }
             if (webView.canGoBack()) {
                 webView.goBack()

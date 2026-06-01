@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ExambroParamartha" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="Theme.ExambroParamartha" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/bg_dark</item>
         <item name="colorPrimaryDark">@color/bg_dark</item>
         <item name="colorAccent">@color/color_gold</item>
